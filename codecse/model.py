@@ -6,9 +6,7 @@ import pytorch_lightning as pl
 
 from transformers import (
     AutoModel,
-    AutoTokenizer,
     BertConfig,
-    EncoderDecoderConfig,
     EncoderDecoderModel,
     FunnelConfig,
     RobertaConfig,
@@ -259,32 +257,6 @@ class Seq2Seq(pl.LightningModule):
     def generate(self, input_ids: torch.TensorType):
         ...
 
-
-if __name__ == "__main__":
-    from pytorch_lightning.loggers import TensorBoardLogger
-
-    from dataset import AugmentedCodeToTextDataModule, CodeToTextDataModuleForMaskedLM
-    from constants import (
-        AVAIL_GPUS,
-    )
-
-    pl.seed_everything(42)
-
-    # dm = AugmentedCodeToTextDataModule()
-    dm = CodeToTextDataModuleForMaskedLM()
-    vocab_size = len(dm.tokenizer)
-
-    dm.prepare_data()
-    dm.setup("fit")
-
-    encoder = Encoder("roberta", masked_lm=True, vocab_size=vocab_size)
-    trainer = pl.Trainer(
-        max_epochs=1,
-        gpus=AVAIL_GPUS,
-        log_every_n_steps=2,
-        precision=16,
-        stochastic_weight_avg=True,
-        logger=TensorBoardLogger("logs/model_file/masked_lm"),
-    )
-
-    trainer.fit(encoder, dm)
+    def save(self, path: str = "models/codecse-seq2seq"):
+        self.model.save_pretrained(path)
+        return path

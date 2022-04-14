@@ -14,7 +14,7 @@ import datasets as ds
 from .constants import DATASET_NAME, NUM_WORKERS, TOKENIZER_MODEL
 
 
-class CodeToTextDataModule(pl.LightningDataModule):
+class PLToNLDM(pl.LightningDataModule):
 
     loader_cols = [
         "input_ids",
@@ -111,7 +111,7 @@ class CodeToTextDataModule(pl.LightningDataModule):
         return features
 
 
-class AugmentedCodeToTextDataModule(CodeToTextDataModule):
+class AugmentedPLToNLDM(PLToNLDM):
     loader_cols = [
         "input_ids",
         "attention_mask",
@@ -157,7 +157,7 @@ class AugmentedCodeToTextDataModule(CodeToTextDataModule):
         return features
 
 
-class CodeToTextDataModuleForMaskedLM(CodeToTextDataModule):
+class PLToNLDMForMaskedLM(PLToNLDM):
 
     loader_cols = ["input_ids", "attention_mask", "labels"]
 
@@ -169,7 +169,9 @@ class CodeToTextDataModuleForMaskedLM(CodeToTextDataModule):
         batch_size: int = 2,
         mlm_probability: float = 0.15,
     ):
-        super().__init__(pl, max_seq_length, padding, batch_size)
+        super().__init__(
+            pl=pl, max_seq_length=max_seq_length, padding=padding, batch_size=batch_size
+        )
         self.data_collator = DataCollatorForLanguageModeling(
             mlm_probability=mlm_probability, tokenizer=self.tokenizer
         )
@@ -216,8 +218,8 @@ class CodeToTextDataModuleForMaskedLM(CodeToTextDataModule):
 
 
 if __name__ == "__main__":
-    dm = CodeToTextDataModuleForMaskedLM(mlm_probability=1.0)
-    # dm = AugmentedCodeToTextDataModule()
+    dm = PLToNLDMForMaskedLM(mlm_probability=1.0)
+    # dm = AugmentedPLToNLDM()
     dm.prepare_data()
     dm.setup("fit")
 
