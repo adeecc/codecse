@@ -1,4 +1,3 @@
-from lib2to3.pgen2 import token
 from typing import Optional
 from tokenizers import Tokenizer
 
@@ -32,17 +31,20 @@ class CodeToTextDataModule(pl.LightningDataModule):
         batch_size: int = 2,
     ):
         super().__init__()
-        self.save_hyperparameters()
+        self.pl = pl
+        self.max_seq_length = max_seq_length
+        self.padding = padding
+        self.batch_size = batch_size
 
         self.tokenizer: Tokenizer = AutoTokenizer.from_pretrained(
             TOKENIZER_MODEL, use_fast=True
         )
 
     def prepare_data(self) -> None:
-        ds.load_dataset(DATASET_NAME, self.hparams.pl)
+        ds.load_dataset(DATASET_NAME, self.pl)
 
     def setup(self, stage: Optional[str] = None) -> None:
-        self.dataset = ds.load_dataset(DATASET_NAME, self.hparams.pl)
+        self.dataset = ds.load_dataset(DATASET_NAME, self.pl)
 
         for split in self.dataset.keys():
             self.dataset[split] = self.dataset[split].map(
@@ -62,7 +64,7 @@ class CodeToTextDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(
             self.dataset["train"],
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size,
             num_workers=NUM_WORKERS,
             drop_last=True,
         )
@@ -70,7 +72,7 @@ class CodeToTextDataModule(pl.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(
             self.dataset["validation"],
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size,
             num_workers=NUM_WORKERS,
             drop_last=True,
         )
@@ -78,7 +80,7 @@ class CodeToTextDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(
             self.dataset["test"],
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size,
             num_workers=NUM_WORKERS,
             drop_last=True,
         )
@@ -89,15 +91,15 @@ class CodeToTextDataModule(pl.LightningDataModule):
 
         features = self.tokenizer(
             lang_name_code_pair,
-            max_length=self.hparams.max_seq_length,
-            padding=self.hparams.padding,
+            max_length=self.max_seq_length,
+            padding=self.padding,
             truncation=True,
         )
 
         targets = self.tokenizer(
             batch["docstring"],
-            max_length=self.hparams.max_seq_length,
-            padding=self.hparams.padding,
+            max_length=self.max_seq_length,
+            padding=self.padding,
             truncation=True,
         )
 
@@ -120,21 +122,30 @@ class AugmentedCodeToTextDataModule(CodeToTextDataModule):
         "target_attention_mask",
     ]
 
+    def __init__(
+        self,
+        pl: str = "java",
+        max_seq_length: int = 128,
+        padding: str = "max_length",
+        batch_size: int = 2,
+    ):
+        super().__init__(pl, max_seq_length, padding, batch_size)
+
     def _to_features(self, batch, indices=None):
         # TODO: Add DataFlow graph to the encoded features
         lang_name_code_pair = list(zip(batch["language"], batch["code"]))
 
         features = self.tokenizer(
             lang_name_code_pair,
-            max_length=self.hparams.max_seq_length,
-            padding=self.hparams.padding,
+            max_length=self.max_seq_length,
+            padding=self.padding,
             truncation=True,
         )
 
         targets = self.tokenizer(
             batch["docstring"],
-            max_length=self.hparams.max_seq_length,
-            padding=self.hparams.padding,
+            max_length=self.max_seq_length,
+            padding=self.padding,
             truncation=True,
         )
 
@@ -166,7 +177,7 @@ class CodeToTextDataModuleForMaskedLM(CodeToTextDataModule):
     def train_dataloader(self):
         return DataLoader(
             self.dataset["train"],
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size,
             collate_fn=self.data_collator,
             num_workers=NUM_WORKERS,
             drop_last=True,
@@ -175,7 +186,7 @@ class CodeToTextDataModuleForMaskedLM(CodeToTextDataModule):
     def val_dataloader(self):
         return DataLoader(
             self.dataset["validation"],
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size,
             collate_fn=self.data_collator,
             num_workers=NUM_WORKERS,
             drop_last=True,
@@ -184,7 +195,7 @@ class CodeToTextDataModuleForMaskedLM(CodeToTextDataModule):
     def test_dataloader(self):
         return DataLoader(
             self.dataset["test"],
-            batch_size=self.hparams.batch_size,
+            batch_size=self.batch_size,
             collate_fn=self.data_collator,
             num_workers=NUM_WORKERS,
             drop_last=True,
@@ -196,8 +207,8 @@ class CodeToTextDataModuleForMaskedLM(CodeToTextDataModule):
 
         features = self.tokenizer(
             lang_name_code_pair,
-            max_length=self.hparams.max_seq_length,
-            padding=self.hparams.padding,
+            max_length=self.max_seq_length,
+            padding=self.padding,
             truncation=True,
         )
 
